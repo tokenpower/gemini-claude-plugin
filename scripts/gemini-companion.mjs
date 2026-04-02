@@ -12,9 +12,7 @@ import { resolve } from "node:path";
 import { checkGeminiReady, runGemini } from "./lib/gemini.mjs";
 import {
   isGitRepo,
-  getRepoRoot,
   getDiff,
-  getDiffStats,
   getStatus,
   getCurrentBranch,
   getBaseBranch,
@@ -44,14 +42,15 @@ async function cmdSetup() {
   } else {
     console.log(`Gemini CLI is NOT ready: ${result.error}`);
     console.log("\nTo install Gemini CLI:");
-    console.log("  npm install -g @anthropic-ai/gemini-cli");
-    console.log("  # or");
-    console.log("  npx @anthropic-ai/gemini-cli");
+    console.log("  npm install -g @anthropic-ai/sdk");
+    console.log("  # or visit: https://github.com/anthropics/gemini-cli");
     console.log("\nThen authenticate:");
     console.log("  gemini");
     process.exit(1);
   }
 }
+
+const VALID_SCOPES = new Set(["working-tree", "branch", "staged"]);
 
 async function cmdReview() {
   const { values } = parseArgs({
@@ -67,6 +66,12 @@ async function cmdReview() {
   });
 
   const cwd = resolve(values.cwd || process.cwd());
+  const scope = values.scope;
+
+  // Validate scope
+  if (!VALID_SCOPES.has(scope)) {
+    die(`Invalid --scope "${scope}". Must be one of: ${[...VALID_SCOPES].join(", ")}`);
+  }
 
   // Verify git repo
   if (!isGitRepo(cwd)) {
@@ -79,7 +84,6 @@ async function cmdReview() {
     die(`Gemini CLI not ready: ${check.error}\nRun /gemini:setup first.`);
   }
 
-  const scope = values.scope;
   const base = values.base;
 
   // Get diff
@@ -98,13 +102,16 @@ async function cmdReview() {
     return;
   }
 
-  // Build review prompt
+  // Build review prompt (instructions only — diff goes via stdin)
   const branch = getCurrentBranch(cwd);
   const baseBranch = base || getBaseBranch(cwd);
   const recentLog = getLog(cwd, 5);
   const focusText = values.focus ? `\n\nFocus area: ${values.focus}` : "";
 
-  const reviewPrompt = `You are an expert code reviewer. Review the following git diff carefully and provide a thorough code review.
+  // Use a unique boundary to prevent backtick sequences in diff from breaking the prompt
+  const BOUNDARY = "===DIFF_BOUNDARY_" + Date.now() + "===";
+
+  const reviewPrompt = `You are an expert code reviewer. Review the git diff provided on stdin carefully and provide a thorough code review.
 
 Context:
 - Branch: ${branch}
@@ -131,26 +138,28 @@ Output format:
   - Suggested fix (if applicable)
 - End with a brief summary of what the changes do
 
-Here is the diff to review:
-
-\`\`\`diff
-${diff}
-\`\`\``;
+The diff content follows between the boundary markers on stdin:
+${BOUNDARY}`;
 
   info("Running Gemini review...");
 
-  const result = await runGemini({
-    prompt: reviewPrompt,
-    cwd,
-    model: values.model,
-    onProgress: (chunk) => process.stdout.write(chunk),
-  });
+  try {
+    const result = await runGemini({
+      prompt: reviewPrompt,
+      stdin: `${BOUNDARY}\n${diff}\n${BOUNDARY}`,
+      cwd,
+      model: values.model,
+      onProgress: (chunk) => process.stdout.write(chunk),
+    });
 
-  if (result.exitCode !== 0) {
-    if (result.stderr) {
-      console.error("\n[gemini] stderr:\n" + result.stderr);
+    if (result.exitCode !== 0) {
+      if (result.stderr) {
+        console.error("\n[gemini] stderr:\n" + result.stderr);
+      }
+      process.exit(result.exitCode || 1);
     }
-    process.exit(result.exitCode || 1);
+  } catch (err) {
+    die(`Failed to execute Gemini CLI: ${err.message}`);
   }
 
   // stdout was already streamed via onProgress
@@ -184,20 +193,24 @@ async function cmdTask() {
 
   info(`Running Gemini task...`);
 
-  const result = await runGemini({
-    prompt: taskPrompt,
-    cwd,
-    model: values.model,
-    sandbox: values.sandbox,
-    yolo: values.write,
-    onProgress: (chunk) => process.stdout.write(chunk),
-  });
+  try {
+    const result = await runGemini({
+      prompt: taskPrompt,
+      cwd,
+      model: values.model,
+      sandbox: values.sandbox,
+      yolo: values.write,
+      onProgress: (chunk) => process.stdout.write(chunk),
+    });
 
-  if (result.exitCode !== 0) {
-    if (result.stderr) {
-      console.error("\n[gemini] stderr:\n" + result.stderr);
+    if (result.exitCode !== 0) {
+      if (result.stderr) {
+        console.error("\n[gemini] stderr:\n" + result.stderr);
+      }
+      process.exit(result.exitCode || 1);
     }
-    process.exit(result.exitCode || 1);
+  } catch (err) {
+    die(`Failed to execute Gemini CLI: ${err.message}`);
   }
 
   console.log(""); // trailing newline

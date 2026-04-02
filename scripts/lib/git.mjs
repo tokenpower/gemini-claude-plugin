@@ -28,7 +28,11 @@ export function getCurrentBranch(cwd) {
   try {
     return git(["symbolic-ref", "--short", "HEAD"], cwd);
   } catch {
-    return git(["rev-parse", "--short", "HEAD"], cwd);
+    try {
+      return git(["rev-parse", "--short", "HEAD"], cwd);
+    } catch {
+      return "unknown";
+    }
   }
 }
 
@@ -60,17 +64,29 @@ export function getBaseBranch(cwd) {
  * - "staged": only staged changes
  */
 export function getDiff(cwd, { scope = "working-tree", base }) {
-  switch (scope) {
-    case "staged":
-      return git(["diff", "--cached"], cwd);
-    case "branch": {
-      const baseBranch = base || getBaseBranch(cwd);
-      const mergeBase = git(["merge-base", baseBranch, "HEAD"], cwd);
-      return git(["diff", mergeBase, "HEAD"], cwd);
+  try {
+    switch (scope) {
+      case "staged":
+        return git(["diff", "--cached"], cwd);
+      case "branch": {
+        const baseBranch = base || getBaseBranch(cwd);
+        const mergeBase = git(["merge-base", baseBranch, "HEAD"], cwd);
+        return git(["diff", mergeBase, "HEAD"], cwd);
+      }
+      case "working-tree":
+      default:
+        return git(["diff", "HEAD"], cwd);
     }
-    case "working-tree":
-    default:
-      return git(["diff", "HEAD"], cwd);
+  } catch {
+    // Fallback: try diff without HEAD (works for initial commits with staged files)
+    try {
+      if (scope === "staged" || scope === "working-tree") {
+        return git(["diff", "--cached"], cwd);
+      }
+    } catch {
+      // ignore
+    }
+    return "";
   }
 }
 
