@@ -7,7 +7,7 @@ import { spawn } from "node:child_process";
 const GEMINI_BIN = process.env.GEMINI_PATH || "gemini";
 
 /** Default model for all Gemini invocations. */
-export const DEFAULT_MODEL = "gemini-3.1-pro";
+export const DEFAULT_MODEL = "gemini-3.1-pro-preview";
 
 /**
  * Check if the Gemini CLI is available and authenticated.
