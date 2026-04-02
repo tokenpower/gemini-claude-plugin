@@ -6,6 +6,9 @@ import { spawn } from "node:child_process";
 
 const GEMINI_BIN = process.env.GEMINI_PATH || "gemini";
 
+/** Default model for all Gemini invocations. */
+export const DEFAULT_MODEL = "gemini-2.5-pro";
+
 /**
  * Check if the Gemini CLI is available and authenticated.
  */
@@ -54,9 +57,8 @@ export async function runGemini({
 }) {
   const args = [];
 
-  if (model) {
-    args.push("--model", model);
-  }
+  const effectiveModel = model || DEFAULT_MODEL;
+  args.push("--model", effectiveModel);
   if (sandbox) {
     args.push("--sandbox");
   }

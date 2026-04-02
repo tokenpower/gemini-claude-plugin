@@ -197,9 +197,17 @@ Then ask Claude to also review the same changes. Compare the two sets of finding
 |----------|-------------|---------|
 | `GEMINI_PATH` | Path to the Gemini CLI binary | `gemini` (from PATH) |
 
+### Default Model
+
+The plugin defaults to **`gemini-2.5-pro`** for all commands (review, task). You can override per-command with `--model`:
+
+```bash
+/gemini:review --model gemini-2.5-flash
+```
+
 ### Gemini CLI Configuration
 
-The plugin uses your local Gemini CLI installation and its existing configuration. Any model preferences, API keys, or other settings configured in Gemini CLI will be picked up automatically.
+The plugin uses your local Gemini CLI installation and its existing configuration. Any API keys or other settings configured in Gemini CLI will be picked up automatically.
 
 ## FAQ
 
@@ -216,7 +224,7 @@ By default, no. The `/gemini:review` command is strictly read-only. The `/gemini
 Yes. Pass `--model <model-name>` to any command:
 
 ```bash
-/gemini:review --model gemini-2.5-pro
+/gemini:review --model gemini-2.5-flash
 /gemini:task --model gemini-2.5-flash "summarize recent changes"
 ```
 
@@ -427,9 +435,17 @@ cp -r /path/to/gemini-claude-plugin/.claude-plugin ~/.claude/plugins/cache/local
 |------|------|--------|
 | `GEMINI_PATH` | Gemini CLI 二进制文件路径 | `gemini`（从 PATH 查找） |
 
+### 默认模型
+
+插件默认使用 **`gemini-2.5-pro`** 执行所有命令（review、task）。可通过 `--model` 逐命令覆盖：
+
+```bash
+/gemini:review --model gemini-2.5-flash
+```
+
 ### Gemini CLI 配置
 
-插件使用本地已安装的 Gemini CLI 及其现有配置。Gemini CLI 中配置的模型偏好、API 密钥或其他设置都会被自动使用。
+插件使用本地已安装的 Gemini CLI 及其现有配置。Gemini CLI 中配置的 API 密钥或其他设置都会被自动使用。
 
 ## 常见问题
 
@@ -446,7 +462,7 @@ cp -r /path/to/gemini-claude-plugin/.claude-plugin ~/.claude/plugins/cache/local
 可以。在任何命令中传入 `--model <模型名称>`：
 
 ```bash
-/gemini:review --model gemini-2.5-pro
+/gemini:review --model gemini-2.5-flash
 /gemini:task --model gemini-2.5-flash "总结最近的变更"
 ```
 

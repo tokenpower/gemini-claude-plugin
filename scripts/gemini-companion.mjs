@@ -9,7 +9,7 @@
  */
 import { parseArgs } from "node:util";
 import { resolve } from "node:path";
-import { checkGeminiReady, runGemini } from "./lib/gemini.mjs";
+import { checkGeminiReady, runGemini, DEFAULT_MODEL } from "./lib/gemini.mjs";
 import {
   isGitRepo,
   getDiff,
@@ -141,7 +141,8 @@ Output format:
 The diff content follows between the boundary markers on stdin:
 ${BOUNDARY}`;
 
-  info("Running Gemini review...");
+  const effectiveModel = values.model || DEFAULT_MODEL;
+  info(`Running Gemini review (model: ${effectiveModel})...`);
 
   try {
     const result = await runGemini({
@@ -191,7 +192,8 @@ async function cmdTask() {
     die(`Gemini CLI not ready: ${check.error}\nRun /gemini:setup first.`);
   }
 
-  info(`Running Gemini task...`);
+  const effectiveModel = values.model || DEFAULT_MODEL;
+  info(`Running Gemini task (model: ${effectiveModel})...`);
 
   try {
     const result = await runGemini({
